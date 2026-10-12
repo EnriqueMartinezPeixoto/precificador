@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Precificador — calcule o preço de venda de qualquer produto</title>
+<style>
+:root{
+  --bg:#EEF1ED; --surface:#FFFFFF; --ink:#16202A; --muted:#5B6773; --line:#D5DBD4;
+  --accent:#1F5F4A; --accent-ink:#FFFFFF; --tag:#FFC93C; --tag-ink:#2A1F00; --danger:#B3261E;
+  --c-mat:#2F7D6B; --c-labor:#3B6FB6; --c-over:#8A6FC2; --c-extra:#C98A2B; --c-tax:#B35C5C; --c-fee:#D07A9A; --c-profit:#FFC93C;
+  --display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
+  --body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1519; --surface:#192026; --ink:#E8ECEF; --muted:#9AA6B0; --line:#2B353D;
+    --accent:#5CC4A0; --accent-ink:#06231A; --danger:#FF8A80;
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--body);padding-bottom:calc(84px + var(--safe-b))}
+h1,h2,h3{font-family:var(--display);line-height:1.1;margin:0}
+button,input,select{font:inherit;color:inherit}
+.wrap{max-width:1080px;margin:0 auto;padding:20px 16px}
+header.top{padding-top:28px}
+header.top h1{font-size:clamp(2rem,6vw,3.2rem);font-weight:800;letter-spacing:-.02em}
+header.top p{color:var(--muted);max-width:56ch;margin:10px 0 0}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px;align-items:center}
+.toolbar label{font-size:.9rem;color:var(--muted)}
+.layout{display:grid;gap:28px;margin-top:8px}
+@media(min-width:900px){
+  .layout{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);align-items:start}
+  .result-col{position:sticky;top:16px}
+}
+.sec{padding:22px 0;border-top:1px solid var(--line)}
+.sec:first-child{border-top:0}
+.sec h2{font-size:1.35rem;font-weight:700}
+.sec .hint{color:var(--muted);font-size:.92rem;margin:6px 0 14px}
+.fields{display:grid;gap:12px;grid-template-columns:1fr 1fr}
+.fields .full{grid-column:1/-1}
+.f{display:flex;flex-direction:column;gap:5px;min-width:0}
+.f>span,.lbl{font-size:.85rem;font-weight:500;color:var(--muted)}
+input,select{background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;min-height:44px;width:100%}
+.join{display:flex}
+.join input{border-top-right-radius:0;border-bottom-right-radius:0;border-right:0;flex:1 1 auto}
+.join select{border-top-left-radius:0;border-bottom-left-radius:0;width:auto;flex:0 0 76px;padding-left:8px;padding-right:4px}
+.affix{display:flex;align-items:center}
+.affix input{border-top-right-radius:0;border-bottom-right-radius:0;border-right:0}
+.affix b{border:1.5px solid var(--line);border-left:0;border-radius:0 10px 10px 0;padding:0 12px;min-height:44px;display:flex;align-items:center;color:var(--muted);background:var(--bg)}
+.rows{display:grid;gap:12px}
+.row{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:10px}
+.row .cost{display:flex;flex-direction:column;justify-content:flex-end;gap:5px}
+.row .cost b{min-height:44px;display:flex;align-items:center;font-family:var(--display);font-size:1.15rem;}
+.row-head{display:flex;gap:8px}
+.row-head input{flex:1}
+.x{background:none;border:1.5px solid var(--line);border-radius:10px;min-width:44px;min-height:44px;cursor:pointer;color:var(--muted);font-size:1.2rem}
+.x:hover{color:var(--danger);border-color:var(--danger)}
+.btn{border:1.5px solid var(--ink);background:transparent;border-radius:999px;padding:9px 18px;min-height:44px;cursor:pointer;font-weight:600}
+.btn:hover{background:var(--ink);color:var(--bg)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.small{padding:6px 14px;min-height:38px;font-size:.92rem}
+.add{margin-top:12px}
+.tag{position:relative;background:var(--tag);color:var(--tag-ink);border-radius:18px;padding:26px 22px 22px 64px; clip-path:polygon(0 50%,34px 0,100% 0,100% 100%,34px 100%);}
+.tag::before{content:"";position:absolute;left:38px;top:50%;width:14px;height:14px;border-radius:50%;background:var(--bg);transform:translateY(-50%);box-shadow:inset 0 2px 3px rgba(0,0,0,.25)}
+.tag .k{font-size:.9rem;font-weight:600;opacity:.8}
+.tag .price{font-family:var(--display);font-weight:800;font-size:clamp(2.4rem,9vw,3.6rem);line-height:1.05}
+.stats{margin:18px 0 0;display:grid;gap:0}
+.stats div{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.stats dt{color:var(--muted)}
+.stats dd{margin:0;font-weight:600;text-align:right}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <h1 data-i18n="appTitle">Precificador</h1>
+    <p data-i18n="appDesc">Liste o que gastou, o tempo que levou e quanto quer ganhar. O preço de venda sai pronto.</p>
+    <div class="toolbar">
+      <!-- NOVO: Seletor de Idioma -->
+      <select id="langSelect" style="width:auto;min-width:140px">
+        <option value="pt-BR">🇧🇷 Português</option>
+        <option value="en-US">🇺🇸 English</option>
+        <option value="es-ES">🇪🇸 Español</option>
+      </select>
+      
+      <button class="btn small ghost" id="btnNovo" type="button" data-i18n="btnStart">Começar do zero</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <main>
+      <section class="sec">
+        <h2 data-i18n="secProduct">O produto</h2>
+        <div class="fields">
+          <label class="f full"><span data-i18n="lblProdName">Nome</span><input data-f="name" type="text" autocomplete="off"></label>
+          <label class="f"><span data-i18n="lblUnits">Quantas unidades rende?</span><input data-f="units" type="number" min="0" step="any"></label>
+          <label class="f"><span data-i18n="lblCurrency">Moeda</span>
+            <select data-f="currency">
+              <option value="BRL">Real (R$)</option>
+              <option value="USD">Dólar (US$)</option>
+              <option value="EUR">Euro (€)</option>
+              <option value="GBP">Libra (£)</option>
+              <option value="ARS">Peso Argentino (ARS)</option>
+              <option value="MXN">Peso Mexicano (MXN)</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section class="sec">
+        <h2 data-i18n="secMaterials">Materiais e insumos</h2>
+        <div class="rows" id="materials"></div>
+        <button class="btn small add" id="addMat" type="button" data-i18n="btnAddMat">+ Adicionar material</button>
+      </section>
+
+      <section class="sec">
+        <h2 data-i18n="secTime">Seu tempo</h2>
+        <div class="fields">
+          <label class="f"><span data-i18n="lblHours">Horas gastas</span><input data-f="hours" type="number" min="0" step="any"></label>
+          <label class="f"><span data-i18n="lblRate">Valor da sua hora</span><input data-f="rate" type="number" min="0" step="any"></label>
+        </div>
+      </section>
+
+      <section class="sec">
+        <h2 data-i18n="secSales">Venda e lucro</h2>
+        <div class="fields">
+          <label class="f"><span data-i18n="lblMargin">Margem de lucro</span><span class="affix"><input data-f="margin" type="number" min="0" step="any"><b>%</b></span></label>
+          <label class="f"><span data-i18n="lblTax">Impostos</span><span class="affix"><input data-f="tax" type="number" min="0" step="any"><b>%</b></span></label>
+          <label class="f"><span data-i18n="lblFee">Taxas (cartão)</span><span class="affix"><input data-f="fee" type="number" min="0" step="any"><b>%</b></span></label>
+        </div>
+      </section>
+    </main>
+
+    <aside class="result-col" id="resultado">
+      <div class="res">
+        <div class="tag">
+          <div class="k" data-i18n="resTitle">Preço sugerido, por unidade</div>
+          <div class="price" id="outPrice">—</div>
+        </div>
+
+        <dl class="stats">
+          <div><dt data-i18n="statCost">Custo por unidade</dt><dd id="sCost">—</dd></div>
+          <div><dt data-i18n="statMin">Preço mínimo</dt><dd id="sMin">—</dd></div>
+          <div><dt data-i18n="statProfit">Lucro por unidade</dt><dd id="sProfit">—</dd></div>
+        </dl>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  /* ---------- Dicionário i18n ---------- */
+  const dict = {
+    "pt-BR": {
+      appTitle: "Precificador", appDesc: "Liste o que gastou, o tempo que levou e quanto quer ganhar. O preço de venda sai pronto.",
+      btnStart: "Começar do zero", secProduct: "O produto", lblProdName: "Nome do produto",
+      lblUnits: "Quantas unidades rende?", lblCurrency: "Moeda", secMaterials: "Materiais e insumos",
+      btnAddMat: "+ Adicionar material", secTime: "Seu tempo", lblHours: "Horas gastas no lote",
+      lblRate: "Valor da sua hora", secSales: "Venda e lucro", lblMargin: "Margem de lucro desejada",
+      lblTax: "Impostos", lblFee: "Taxas (cartão/plataforma)", resTitle: "Preço de venda sugerido",
+      statCost: "Custo por unidade", statMin: "Preço mínimo (sem lucro)", statProfit: "Lucro por unidade",
+      matName: "Material", matPaid: "Preço pago", matBought: "Qtd. comprada", matUsed: "Qtd. usada"
+    },
+    "en-US": {
+      appTitle: "Pricer Tool", appDesc: "List your expenses, time spent, and desired profit. Get your selling price instantly.",
+      btnStart: "Start over", secProduct: "The Product", lblProdName: "Product Name",
+      lblUnits: "How many units per batch?", lblCurrency: "Currency", secMaterials: "Materials & Supplies",
+      btnAddMat: "+ Add material", secTime: "Your Time", lblHours: "Hours spent on batch",
+      lblRate: "Your hourly rate", secSales: "Sales & Profit", lblMargin: "Desired profit margin",
+      lblTax: "Taxes", lblFee: "Fees (card/platform)", resTitle: "Suggested selling price",
+      statCost: "Cost per unit", statMin: "Minimum price (breakeven)", statProfit: "Profit per unit",
+      matName: "Material", matPaid: "Price paid", matBought: "Qty bought", matUsed: "Qty used"
+    },
+    "es-ES": {
+      appTitle: "Fijador de Precios", appDesc: "Haz una lista de tus gastos, el tiempo que tardaste y cuánto quieres ganar. El precio sale listo.",
+      btnStart: "Empezar de cero", secProduct: "El Producto", lblProdName: "Nombre",
+      lblUnits: "¿Cuántas unidades rinde?", lblCurrency: "Moneda", secMaterials: "Materiales e Insumos",
+      btnAddMat: "+ Añadir material", secTime: "Tu tiempo", lblHours: "Horas invertidas",
+      lblRate: "Valor de tu hora", secSales: "Ventas y ganancia", lblMargin: "Margen de ganancia",
+      lblTax: "Impuestos", lblFee: "Comisiones (tarjeta)", resTitle: "Precio de venta sugerido",
+      statCost: "Costo por unidad", statMin: "Precio mínimo", statProfit: "Ganancia por unidad",
+      matName: "Material", matPaid: "Precio pagado", matBought: "Cant. comprada", matUsed: "Cant. usada"
+    }
+  };
+
+  /* ---------- Estado e Config ---------- */
+  let currentLang = "pt-BR";
+  let currentCurrency = "BRL";
+  
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];      const num = v => parseFloat(String(v).replace(",", ".")) \vert{}\vert{} 0;      // Intl formata de acordo com a moeda e o idioma do usuário.   // Se o idioma for en-US, 1000 reais vira R$ 1,000.00. Se pt-BR, R$ 1.000,00.   const fmt = n => new Intl.NumberFormat(currentLang, { style: "currency", currency: currentCurrency }).format(n);      const t = (key) => dict[currentLang][key] \vert{}\vert{} key;      const newMat = () => ({ id: Math.random().toString(36).slice(2), name: "", paid: "", bought: "", used: "" });      let state = { name: "", units: 1, currency: "BRL", materials: [newMat()], hours: "", rate: "", margin: 30, tax: 0, fee: 0 };    /* ---------- Engine de Tradução ---------- */   function updateLanguage() {     document.documentElement.lang = currentLang;     $$("[data-i18n]").forEach(el => { el.textContent = t(el.dataset.i18n); });
+    renderRows();
+    render();
+  }
+
+  $("#langSelect").addEventListener("change", e => {
+    currentLang = e.target.value;
+    updateLanguage();
+  });
+
+  /* ---------- UI & Calculos ---------- */
+  function matRow(m) {
+    const el = document.createElement("div"); el.className = "row"; el.dataset.id = m.id;
+    el.innerHTML = `
+      <div class="row-head">
+        <input type="text" data-k="name" placeholder="${t('matName')}">
+        <button class="x" data-remove>×</button>
+      </div>
+      <div class="fields">
+        <label class="f"><span>${t('matPaid')}</span><input type="number" data-k="paid"></label>
+        <label class="f"><span>${t('matBought')}</span><input type="number" data-k="bought"></label>
+        <label class="f"><span>${t('matUsed')}</span><input type="number" data-k="used"></label>
+      </div>`;
+    $('[data-k="name"]', el).value = m.name; $('[data-k="paid"]', el).value = m.paid;
+    $('[data-k="bought"]', el).value = m.bought; $('[data-k="used"]', el).value = m.used;
+    return el;
+  }
+
+  function renderRows() {
+    $("#materials").replaceChildren(...state.materials.map(matRow));
+  }
+
+  function render() {
+    currentCurrency = state.currency;
+    const units = Math.max(num(state.units), 0);
+    
+    let mats = 0;
+    state.materials.forEach(m => {
+      const b = num(m.bought);
+      if(b > 0) mats += (num(m.paid) / b) * num(m.used);
+    });
+
+    const labor = num(state.hours) * num(state.rate);
+    const totalCost = mats + labor;
+    const costU = units > 0 ? totalCost / units : 0;
+    
+    const deduct = num(state.tax) + num(state.fee) + num(state.margin);
+    let price = null, minPrice = null, profit = null;
+
+    if (units > 0 && deduct < 100 && totalCost > 0) {
+      price = costU / (1 - deduct / 100);
+      minPrice = costU / (1 - (num(state.tax) + num(state.fee)) / 100);
+      profit = price - costU - (price * (num(state.tax) + num(state.fee)) / 100);
+    }
+
+    $("#outPrice").textContent = price !== null ? fmt(price) : "—";
+    $("#sCost").textContent = costU > 0 ? fmt(costU) : "—";
+    $("#sMin").textContent = minPrice !== null ? fmt(minPrice) : "—";
+    $("#sProfit").textContent = profit !== null ? fmt(profit) : "—";
+  }
+
+  document.addEventListener("input", ev => {
+    const el = ev.target;
+    if (el.dataset.f) {
+      state[el.dataset.f] = el.value;
+      render(); return;
+    }
+    const row = el.closest(".row");
+    if (row && el.dataset.k) {
+      const m = state.materials.find(i => i.id === row.dataset.id);
+      if (m) { m[el.dataset.k] = el.value; render(); }
+    }
+  });
+
+  document.addEventListener("click", ev => {
+    if (ev.target.matches("[data-remove]")) {
+      const id = ev.target.closest(".row").dataset.id;
+      state.materials = state.materials.filter(m => m.id !== id);
+      if (!state.materials.length) state.materials.push(newMat());
+      renderRows(); render();
+    }
+  });
+
+  $("#addMat").addEventListener("click", () => {     state.materials.push(newMat());     renderRows();     render();   });    /* Iniciar */   $$("[data-f]").forEach(el => el.value = state[el.dataset.f]);
+  renderRows();
+  render();
+})();
+</script>
+</body>
+</html>
