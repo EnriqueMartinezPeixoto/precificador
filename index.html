@@ -3,11 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Precificador — calcule o preço de venda de qualquer produto</title>
+<title>Precificador — calcule o preço de venda de qualquer produto ou serviço</title>
+<meta name="description" content="Calculadora de preço de venda para quem produz algo.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏷️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#EEF1ED; --surface:#FFFFFF; --ink:#16202A; --muted:#5B6773; --line:#D5DBD4;
   --accent:#1F5F4A; --accent-ink:#FFFFFF; --tag:#FFC93C; --tag-ink:#2A1F00; --danger:#B3261E;
+  --c-mat:#2F7D6B; --c-labor:#3B6FB6; --c-over:#8A6FC2; --c-extra:#C98A2B; --c-tax:#B35C5C; --c-fee:#D07A9A; --c-profit:#FFC93C;
   --display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
   --body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --safe-b:env(safe-area-inset-bottom,0px);
@@ -16,7 +22,13 @@
   :root:not([data-theme="light"]){
     --bg:#0F1519; --surface:#192026; --ink:#E8ECEF; --muted:#9AA6B0; --line:#2B353D;
     --accent:#5CC4A0; --accent-ink:#06231A; --danger:#FF8A80;
+    --c-mat:#3FA58E; --c-labor:#5C93DB; --c-over:#A38BDB; --c-extra:#DFA03F; --c-tax:#CC7676; --c-fee:#E39AB6;
   }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1519; --surface:#192026; --ink:#E8ECEF; --muted:#9AA6B0; --line:#2B353D;
+  --accent:#5CC4A0; --accent-ink:#06231A; --danger:#FF8A80;
+  --c-mat:#3FA58E; --c-labor:#5C93DB; --c-over:#A38BDB; --c-extra:#DFA03F; --c-tax:#CC7676; --c-fee:#E39AB6;
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
@@ -24,16 +36,26 @@ body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 var(--body);pa
 h1,h2,h3{font-family:var(--display);line-height:1.1;margin:0}
 button,input,select{font:inherit;color:inherit}
 .wrap{max-width:1080px;margin:0 auto;padding:20px 16px}
-header.top{padding-top:28px}
+
+/* Cabeçalho */
+.langrow{display:flex;justify-content:flex-end;align-items:center;gap:8px}
+.langrow select{width:auto;min-height:40px;padding:6px 10px;font-size:.92rem}
+header.top{padding-top:10px}
 header.top h1{font-size:clamp(2rem,6vw,3.2rem);font-weight:800;letter-spacing:-.02em}
 header.top p{color:var(--muted);max-width:56ch;margin:10px 0 0}
 .toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px;align-items:center}
 .toolbar label{font-size:.9rem;color:var(--muted)}
+
+/* Layout */
 .layout{display:grid;gap:28px;margin-top:8px}
 @media(min-width:900px){
   .layout{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);align-items:start}
   .result-col{position:sticky;top:16px}
+  body{padding-bottom:40px}
+  .bar{display:none!important}
 }
+
+/* Seções do formulário */
 .sec{padding:22px 0;border-top:1px solid var(--line)}
 .sec:first-child{border-top:0}
 .sec h2{font-size:1.35rem;font-weight:700}
@@ -42,255 +64,1088 @@ header.top p{color:var(--muted);max-width:56ch;margin:10px 0 0}
 .fields .full{grid-column:1/-1}
 .f{display:flex;flex-direction:column;gap:5px;min-width:0}
 .f>span,.lbl{font-size:.85rem;font-weight:500;color:var(--muted)}
-input,select{background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;min-height:44px;width:100%}
+input,select{background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;min-height:44px;width:100%;min-width:0}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
+input[type=number]{font-variant-numeric:tabular-nums}
 .join{display:flex}
 .join input{border-top-right-radius:0;border-bottom-right-radius:0;border-right:0;flex:1 1 auto}
 .join select{border-top-left-radius:0;border-bottom-left-radius:0;width:auto;flex:0 0 76px;padding-left:8px;padding-right:4px}
 .affix{display:flex;align-items:center}
 .affix input{border-top-right-radius:0;border-bottom-right-radius:0;border-right:0}
-.affix b{border:1.5px solid var(--line);border-left:0;border-radius:0 10px 10px 0;padding:0 12px;min-height:44px;display:flex;align-items:center;color:var(--muted);background:var(--bg)}
+.affix b{border:1.5px solid var(--line);border-left:0;border-radius:0 10px 10px 0;padding:0 12px;min-height:44px;display:flex;align-items:center;color:var(--muted);background:var(--bg);font-weight:500}
+
+/* Linhas (materiais / extras) */
 .rows{display:grid;gap:12px}
 .row{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;gap:10px}
 .row .cost{display:flex;flex-direction:column;justify-content:flex-end;gap:5px}
-.row .cost b{min-height:44px;display:flex;align-items:center;font-family:var(--display);font-size:1.15rem;}
+.row .cost b{min-height:44px;display:flex;align-items:center;font-family:var(--display);font-size:1.15rem;font-variant-numeric:tabular-nums}
 .row-head{display:flex;gap:8px}
 .row-head input{flex:1}
-.x{background:none;border:1.5px solid var(--line);border-radius:10px;min-width:44px;min-height:44px;cursor:pointer;color:var(--muted);font-size:1.2rem}
+.x{background:none;border:1.5px solid var(--line);border-radius:10px;min-width:44px;min-height:44px;cursor:pointer;color:var(--muted);font-size:1.2rem;line-height:1}
 .x:hover{color:var(--danger);border-color:var(--danger)}
+
+/* Botões */
 .btn{border:1.5px solid var(--ink);background:transparent;border-radius:999px;padding:9px 18px;min-height:44px;cursor:pointer;font-weight:600}
 .btn:hover{background:var(--ink);color:var(--bg)}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08);background:var(--accent);color:var(--accent-ink)}
 .btn.small{padding:6px 14px;min-height:38px;font-size:.92rem}
+.btn.ghost{border-color:var(--line);font-weight:500}
 .add{margin-top:12px}
-.tag{position:relative;background:var(--tag);color:var(--tag-ink);border-radius:18px;padding:26px 22px 22px 64px; clip-path:polygon(0 50%,34px 0,100% 0,100% 100%,34px 100%);}
-.tag::before{content:"absolute;left:38px;top:50%;width:14px;height:14px;border-radius:50%;background:var(--bg);transform:translateY(-50%);box-shadow:inset 0 2px 3px rgba(0,0,0,.25)}
+
+/* Resultado */
+.tag{position:relative;background:var(--tag);color:var(--tag-ink);border-radius:18px;padding:26px 22px 22px 64px;
+  clip-path:polygon(0 50%,34px 0,100% 0,100% 100%,34px 100%);}
+.tag::before{content:"";position:absolute;left:38px;top:50%;width:14px;height:14px;border-radius:50%;background:var(--bg);transform:translateY(-50%);box-shadow:inset 0 2px 3px rgba(0,0,0,.25)}
 .tag .k{font-size:.9rem;font-weight:600;opacity:.8}
-.tag .price{font-family:var(--display);font-weight:800;font-size:clamp(2.4rem,9vw,3.6rem);line-height:1.05}
+.tag .price{font-family:var(--display);font-weight:800;font-size:clamp(2.4rem,9vw,3.6rem);letter-spacing:-.03em;line-height:1.05;font-variant-numeric:tabular-nums;word-break:break-word}
+.tag .for{font-size:.92rem;opacity:.8;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .stats{margin:18px 0 0;display:grid;gap:0}
 .stats div{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
 .stats dt{color:var(--muted)}
-.stats dd{margin:0;font-weight:600;text-align:right}
+.stats dd{margin:0;font-weight:600;font-variant-numeric:tabular-nums;text-align:right}
+.stats .em dd{font-family:var(--display);font-size:1.15rem}
+.res h3{font-size:1.1rem;margin:22px 0 10px}
+.stack{display:flex;height:22px;border-radius:999px;overflow:hidden;background:var(--line)}
+.stack i{display:block;height:100%;min-width:0;transition:width .25s}
+.legend{list-style:none;padding:0;margin:12px 0 0;display:grid;gap:6px;font-size:.93rem}
+.legend li{display:flex;align-items:center;gap:8px}
+.legend .sw{width:12px;height:12px;border-radius:4px;flex:none}
+.legend .n{flex:1}
+.legend .v{font-variant-numeric:tabular-nums;font-weight:600}
+.legend .p{color:var(--muted);width:48px;text-align:right;font-variant-numeric:tabular-nums}
+.warn{background:color-mix(in srgb,var(--danger) 12%,var(--surface));border:1px solid var(--danger);color:var(--ink);border-radius:12px;padding:10px 14px;margin:14px 0 0;font-size:.93rem}
+.warn[hidden]{display:none}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+
+/* Salvos */
+.saved{margin-top:36px;border-top:1px solid var(--line);padding-top:24px}
+.saved h2{font-size:1.35rem}
+.saved ul{list-style:none;padding:0;margin:14px 0;display:grid;gap:8px}
+.saved li{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.saved li .t{flex:1;min-width:0}
+.saved li .t b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.saved li .t small{color:var(--muted)}
+.empty{color:var(--muted)}
+footer{color:var(--muted);font-size:.88rem;margin-top:40px;padding-bottom:12px}
+
+/* Barra fixa no celular */
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);padding:10px 16px calc(10px + var(--safe-b));display:flex;align-items:center;gap:12px;z-index:5}
+.bar .t{flex:1;min-width:0}
+.bar small{display:block;color:var(--muted);line-height:1.1}
+.bar b{font-family:var(--display);font-size:1.5rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.toast{position:fixed;left:50%;bottom:calc(96px + var(--safe-b));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:.92rem;z-index:10;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90vw;text-align:center}
+.toast.on{opacity:1}
+@media(min-width:900px){.toast{bottom:24px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+@media print{
+  .langrow,.toolbar,.bar,.actions,.x,.add,.saved,.btn,.toast{display:none!important}
+  body{background:#fff;color:#000;padding:0}
+  .layout{display:block}.result-col{position:static}
+}
 </style>
 </head>
 <body>
 
 <div class="wrap">
   <header class="top">
-    <h1 data-i18n="appTitle">Precificador</h1>
-    <p data-i18n="appDesc">Liste o que gastou, o tempo que levou e quanto quer ganhar. O preço de venda sai pronto.</p>
-    <div class="toolbar">
-      <select id="langSelect" style="width:auto;min-width:140px">
-        <option value="pt-BR">🇧🇷 Português</option>
-        <option value="en-US">🇺🇸 English</option>
-        <option value="es-ES">🇪🇸 Español</option>
+    <div class="langrow">
+      <label for="lang" aria-hidden="true">🌐</label>
+      <select id="lang" data-i18n-aria="lang.aria">
+        <option value="pt">Português</option>
+        <option value="en">English</option>
+        <option value="es">Español</option>
       </select>
-      
-      <button class="btn small ghost" id="btnNovo" type="button" data-i18n="btnStart">Começar do zero</button>
+    </div>
+    <h1 data-i18n="h1"></h1>
+    <p data-i18n="intro"></p>
+    <div class="toolbar">
+      <label for="exemplo" data-i18n="ex.label"></label>
+      <select id="exemplo" style="width:auto;min-width:200px">
+        <option value="" data-i18n="ex.choose"></option>
+        <option value="bolo" data-i18n="ex.bolo"></option>
+        <option value="camiseta" data-i18n="ex.camiseta"></option>
+        <option value="site" data-i18n="ex.site"></option>
+      </select>
+      <button class="btn small ghost" id="btnNovo" type="button" data-i18n="btn.new"></button>
     </div>
   </header>
 
   <div class="layout">
+    <!-- FORMULÁRIO -->
     <main>
       <section class="sec">
-        <h2 data-i18n="secProduct">O produto</h2>
+        <h2 data-i18n="sec.product"></h2>
+        <p class="hint" data-i18n="sec.product.hint"></p>
         <div class="fields">
-          <label class="f full"><span data-i18n="lblProdName">Nome</span><input data-f="name" type="text" autocomplete="off"></label>
-          <label class="f"><span data-i18n="lblUnits">Quantas unidades rende?</span><input data-f="units" type="number" min="0" step="any"></label>
-          <label class="f"><span data-i18n="lblCurrency">Moeda</span>
+          <label class="f full"><span data-i18n="f.name"></span><input data-f="name" type="text" data-i18n-ph="f.name.ph" autocomplete="off"></label>
+          <label class="f"><span data-i18n="f.units"></span><input data-f="units" type="number" inputmode="decimal" min="0" step="any"></label>
+          <label class="f"><span data-i18n="f.currency"></span>
             <select data-f="currency">
-              <option value="BRL">Real (R$)</option>
-              <option value="USD">Dólar (US$)</option>
-              <option value="EUR">Euro (€)</option>
-              <option value="GBP">Libra (£)</option>
-              <option value="ARS">Peso Argentino (ARS)</option>
-              <option value="MXN">Peso Mexicano (MXN)</option>
+              <option value="BRL">BRL (R$)</option>
+              <option value="USD">USD (US$)</option>
+              <option value="EUR">EUR (€)</option>
+              <option value="GBP">GBP (£)</option>
+              <option value="MXN">MXN ($)</option>
+              <option value="ARS">ARS ($)</option>
+              <option value="COP">COP ($)</option>
+              <option value="CAD">CAD ($)</option>
             </select>
           </label>
         </div>
       </section>
 
       <section class="sec">
-        <h2 data-i18n="secMaterials">Materiais e insumos</h2>
+        <h2 data-i18n="sec.mat"></h2>
+        <p class="hint" data-i18n="sec.mat.hint"></p>
         <div class="rows" id="materials"></div>
-        <button class="btn small add" id="addMat" type="button" data-i18n="btnAddMat">+ Adicionar material</button>
+        <button class="btn small add" id="addMat" type="button" data-i18n="mat.add"></button>
       </section>
 
       <section class="sec">
-        <h2 data-i18n="secTime">Seu tempo</h2>
+        <h2 data-i18n="sec.time"></h2>
+        <p class="hint" data-i18n="sec.time.hint"></p>
         <div class="fields">
-          <label class="f"><span data-i18n="lblHours">Horas gastas</span><input data-f="hours" type="number" min="0" step="any"></label>
-          <label class="f"><span data-i18n="lblRate">Valor da sua hora</span><input data-f="rate" type="number" min="0" step="any"></label>
+          <label class="f"><span data-i18n="f.hours"></span><input data-f="hours" type="number" inputmode="decimal" min="0" step="any"></label>
+          <label class="f"><span data-i18n="f.minutes"></span><input data-f="minutes" type="number" inputmode="decimal" min="0" step="any"></label>
+          <label class="f"><span data-i18n="f.income"></span><input data-f="income" type="number" inputmode="decimal" min="0" step="any" placeholder="3000"></label>
+          <label class="f"><span data-i18n="f.hoursMonth"></span><input data-f="hoursMonth" type="number" inputmode="decimal" min="0" step="any"></label>
+          <label class="f"><span data-i18n="f.rate"></span><input data-f="rate" type="number" inputmode="decimal" min="0" step="any"></label>
+          <div class="f"><span class="lbl">&nbsp;</span><button class="btn small ghost" id="calcRate" type="button" style="min-height:44px" data-i18n="btn.calcRate"></button></div>
         </div>
       </section>
 
       <section class="sec">
-        <h2 data-i18n="secSales">Venda e lucro</h2>
+        <h2 data-i18n="sec.fixed"></h2>
+        <p class="hint" data-i18n="sec.fixed.hint"></p>
         <div class="fields">
-          <label class="f"><span data-i18n="lblMargin">Margem de lucro</span><span class="affix"><input data-f="margin" type="number" min="0" step="any"><b>%</b></span></label>
-          <label class="f"><span data-i18n="lblTax">Impostos</span><span class="affix"><input data-f="tax" type="number" min="0" step="any"><b>%</b></span></label>
-          <label class="f"><span data-i18n="lblFee">Taxas (cartão)</span><span class="affix"><input data-f="fee" type="number" min="0" step="any"><b>%</b></span></label>
+          <label class="f full"><span data-i18n="f.fixed"></span><input data-f="fixedMonthly" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></label>
+        </div>
+      </section>
+
+      <section class="sec">
+        <h2 data-i18n="sec.extra"></h2>
+        <p class="hint" data-i18n="sec.extra.hint"></p>
+        <div class="rows" id="extras"></div>
+        <button class="btn small add" id="addExtra" type="button" data-i18n="extra.add"></button>
+      </section>
+
+      <section class="sec">
+        <h2 data-i18n="sec.sell"></h2>
+        <p class="hint" data-i18n="sec.sell.hint"></p>
+        <div class="fields">
+          <label class="f"><span data-i18n="f.margin"></span><span class="affix"><input data-f="margin" type="number" inputmode="decimal" min="0" step="any"><b>%</b></span></label>
+          <label class="f"><span data-i18n="f.tax"></span><span class="affix"><input data-f="tax" type="number" inputmode="decimal" min="0" step="any"><b>%</b></span></label>
+          <label class="f"><span data-i18n="f.fee"></span><span class="affix"><input data-f="fee" type="number" inputmode="decimal" min="0" step="any"><b>%</b></span></label>
+          <label class="f"><span data-i18n="f.rounding"></span>
+            <select data-f="rounding">
+              <option value="none" data-i18n="round.none"></option>
+              <option value="90" data-i18n="round.90"></option>
+              <option value="int" data-i18n="round.int"></option>
+            </select>
+          </label>
         </div>
       </section>
     </main>
 
+    <!-- RESULTADO -->
     <aside class="result-col" id="resultado">
       <div class="res">
-        <div class="tag">
-          <div class="k" data-i18n="resTitle">Preço sugerido, por unidade</div>
+        <div class="tag" role="status" aria-live="polite">
+          <div class="k" data-i18n="res.priceLabel"></div>
           <div class="price" id="outPrice">—</div>
+          <div class="for" id="outFor"></div>
         </div>
 
+        <div class="warn" id="warn" hidden></div>
+
         <dl class="stats">
-          <div><dt data-i18n="statCost">Custo por unidade</dt><dd id="sCost">—</dd></div>
-          <div><dt data-i18n="statMin">Preço mínimo</dt><dd id="sMin">—</dd></div>
-          <div><dt data-i18n="statProfit">Lucro por unidade</dt><dd id="sProfit">—</dd></div>
+          <div><dt data-i18n="s.cost"></dt><dd id="sCost">—</dd></div>
+          <div><dt data-i18n="s.min"></dt><dd id="sMin">—</dd></div>
+          <div class="em"><dt data-i18n="s.profit"></dt><dd id="sProfit">—</dd></div>
+          <div><dt data-i18n="s.profitBatch"></dt><dd id="sProfitBatch">—</dd></div>
+          <div><dt data-i18n="s.margin"></dt><dd id="sMargin">—</dd></div>
+          <div><dt data-i18n="s.hour"></dt><dd id="sHour">—</dd></div>
+          <div><dt data-i18n="s.revenue"></dt><dd id="sRevenue">—</dd></div>
         </dl>
+
+        <h3 data-i18n="res.where"></h3>
+        <div class="stack" id="stack" aria-hidden="true"></div>
+        <ul class="legend" id="legend"></ul>
+
+        <div class="actions">
+          <button class="btn primary" id="btnSave" type="button" data-i18n="btn.save"></button>
+          <button class="btn" id="btnCopy" type="button" data-i18n="btn.copy"></button>
+          <button class="btn ghost" id="btnPrint" type="button" data-i18n="btn.print"></button>
+        </div>
       </div>
     </aside>
   </div>
+
+  <section class="saved" id="saved">
+    <h2 data-i18n="saved.h"></h2>
+    <ul id="savedList"></ul>
+    <div class="actions" style="margin-top:0">
+      <button class="btn small ghost" id="btnExport" type="button" data-i18n="btn.export"></button>
+      <button class="btn small ghost" id="btnImport" type="button" data-i18n="btn.import"></button>
+      <input type="file" id="fileImport" accept="application/json,.json" hidden>
+    </div>
+    <p class="empty" style="font-size:.9rem;margin-top:12px" data-i18n="saved.note"></p>
+  </section>
+
+  <footer data-i18n="footer"></footer>
 </div>
+
+<div class="bar">
+  <div class="t"><small data-i18n="bar.label"></small><b id="barPrice">—</b></div>
+  <button class="btn primary small" type="button" id="barBtn" data-i18n="bar.details"></button>
+</div>
+<div class="toast" id="toast"></div>
 
 <script>
 (() => {
   "use strict";
 
-  /* ---------- Dicionário i18n ---------- */
-  const dict = {
-    "pt-BR": {
-      appTitle: "Precificador", appDesc: "Liste o que gastou, o tempo que levou e quanto quer ganhar. O preço de venda sai pronto.",
-      btnStart: "Começar do zero", secProduct: "O produto", lblProdName: "Nome do produto",
-      lblUnits: "Quantas unidades rende?", lblCurrency: "Moeda", secMaterials: "Materiais e insumos",
-      btnAddMat: "+ Adicionar material", secTime: "Seu tempo", lblHours: "Horas gastas no lote",
-      lblRate: "Valor da sua hora", secSales: "Venda e lucro", lblMargin: "Margem de lucro desejada",
-      lblTax: "Impostos", lblFee: "Taxas (cartão/plataforma)", resTitle: "Preço de venda sugerido",
-      statCost: "Custo por unidade", statMin: "Preço mínimo (sem lucro)", statProfit: "Lucro por unidade",
-      matName: "Material", matPaid: "Preço pago", matBought: "Qtd. comprada", matUsed: "Qtd. usada"
+  /* ---------- Traduções ---------- */
+  const LOCALES = { pt: "pt-BR", en: "en-US", es: "es" };
+  const EX_CURRENCY = { pt: "BRL", en: "USD", es: "EUR" };
+
+  const I18N = {
+    pt: {
+      "meta.title": "Precificador — calcule o preço de venda de qualquer produto ou serviço",
+      "meta.desc": "Calculadora de preço de venda para quem produz algo: comida, roupas, acessórios, serviços, programas. Some materiais, tempo e custos e descubra quanto cobrar.",
+      "lang.aria": "Idioma",
+      "h1": "Precificador",
+      "intro": "Para quem faz qualquer coisa: bolo, camiseta, pulseira, site ou aula. Liste o que gastou, o tempo que levou e quanto quer ganhar. O preço de venda sai pronto.",
+      "ex.label": "Quer ver funcionando?",
+      "ex.choose": "Escolha um exemplo…",
+      "ex.bolo": "Bolo de pote (comida)",
+      "ex.camiseta": "Camiseta estampada (roupa)",
+      "ex.site": "Site para cliente (programação)",
+      "btn.new": "Começar do zero",
+      "sec.product": "O produto",
+      "sec.product.hint": "Se for um serviço ou projeto único, deixe 1 unidade.",
+      "f.name": "Nome",
+      "f.name.ph": "Ex.: Bolo de pote, Logo, Colar de miçanga",
+      "f.units": "Quantas unidades esse lote rende?",
+      "f.currency": "Moeda",
+      "sec.mat": "Materiais e insumos",
+      "sec.mat.hint": "Informe quanto pagou e quanto comprou. O app calcula o custo só do que você usou neste lote. Serve para ingredientes, tecido, peças, licenças, hospedagem, energia…",
+      "mat.add": "+ Adicionar material",
+      "sec.time": "Seu tempo",
+      "sec.time.hint": "Seu trabalho também é custo. Se não sabe quanto vale sua hora, informe quanto quer ganhar por mês e quantas horas trabalha.",
+      "f.hours": "Horas gastas no lote",
+      "f.minutes": "Minutos extras",
+      "f.income": "Quanto quer ganhar por mês",
+      "f.hoursMonth": "Horas trabalhadas por mês",
+      "f.rate": "Valor da sua hora",
+      "btn.calcRate": "Calcular pela renda",
+      "sec.fixed": "Custos fixos do mês",
+      "sec.fixed.hint": "Aluguel, luz, internet, ferramentas, assinaturas, MEI… Somados, são divididos pelas horas trabalhadas e entram proporcionalmente ao tempo deste lote.",
+      "f.fixed": "Total de custos fixos por mês",
+      "sec.extra": "Outros custos",
+      "sec.extra.hint": "Embalagem, frete, etiqueta, deslocamento, anúncio. Marque se o valor é por lote ou por unidade.",
+      "extra.add": "+ Adicionar custo",
+      "sec.sell": "Venda e lucro",
+      "sec.sell.hint": "Impostos e taxas são percentuais do preço de venda. A margem é o que sobra para você depois de tudo.",
+      "f.margin": "Margem de lucro desejada",
+      "f.tax": "Impostos",
+      "f.fee": "Taxas (cartão, plataforma, comissão)",
+      "f.rounding": "Arredondar preço",
+      "round.none": "Não arredondar",
+      "round.90": "Terminar em ,90",
+      "round.int": "Para o valor inteiro",
+      "res.priceLabel": "Preço de venda sugerido, por unidade",
+      "res.forName": "para {name}",
+      "s.cost": "Custo por unidade",
+      "s.min": "Preço mínimo (lucro zero)",
+      "s.profit": "Lucro por unidade",
+      "s.profitBatch": "Lucro no lote inteiro",
+      "s.margin": "Margem real",
+      "s.hour": "Ganho por hora (seu tempo + lucro)",
+      "s.revenue": "Faturamento do lote",
+      "perHour": "/h",
+      "res.where": "Para onde vai cada real do preço",
+      "part.mat": "Materiais",
+      "part.labor": "Seu tempo",
+      "part.over": "Custos fixos",
+      "part.extra": "Outros custos",
+      "part.tax": "Impostos",
+      "part.fee": "Taxas",
+      "part.profit": "Lucro",
+      "btn.save": "Salvar produto",
+      "btn.copy": "Copiar resumo",
+      "btn.print": "Imprimir",
+      "saved.h": "Produtos salvos",
+      "saved.empty": "Nada salvo ainda. Monte um produto e toque em “Salvar produto”.",
+      "saved.noPrice": "sem preço",
+      "saved.perUnit": "{price} por unidade",
+      "saved.unnamed": "Sem nome",
+      "saved.open": "Abrir",
+      "saved.delete": "Excluir",
+      "saved.note": "Os dados ficam salvos só neste navegador. Exporte um backup de vez em quando.",
+      "btn.export": "Exportar backup (.json)",
+      "btn.import": "Importar backup",
+      "footer": "Precificador · feito para rodar direto no navegador, sem instalar nada.",
+      "bar.label": "Preço sugerido por unidade",
+      "bar.details": "Ver detalhes",
+      "row.mat.ph": "Material (ex.: farinha, tecido, licença)",
+      "row.mat.aria": "Nome do material",
+      "row.mat.remove": "Remover material",
+      "row.paid": "Preço pago",
+      "row.bought": "Quantidade comprada",
+      "row.used": "Quantidade usada",
+      "row.boughtUnit": "Unidade comprada",
+      "row.usedUnit": "Unidade usada",
+      "row.cost": "Custo no lote",
+      "row.extra.ph": "Custo (ex.: embalagem, frete)",
+      "row.extra.aria": "Nome do custo",
+      "row.extra.remove": "Remover custo",
+      "row.value": "Valor",
+      "row.charged": "Cobrado",
+      "per.unit": "Por unidade",
+      "per.batch": "Por lote",
+      "warn.units": "Informe quantas unidades o lote rende (maior que zero).",
+      "warn.deduct": "Margem + impostos + taxas somam {pct}. Precisa ficar abaixo de 100% para existir um preço.",
+      "warn.empty": "Preencha pelo menos um material, seu tempo ou outro custo para calcular.",
+      "warn.rate0": "Seu tempo está valendo zero por hora. Defina o valor da hora para não trabalhar de graça.",
+      "toast.saved": "Produto salvo neste navegador.",
+      "toast.example": "Exemplo carregado. Troque pelos seus valores.",
+      "toast.rate": "Informe a renda desejada e as horas por mês.",
+      "toast.noExport": "Salve algum produto antes de exportar.",
+      "toast.imported": "{n} produto(s) importado(s).",
+      "toast.invalid": "Arquivo inválido. Use um backup exportado por aqui.",
+      "toast.noSummary": "Preencha os dados para gerar o resumo.",
+      "toast.copied": "Resumo copiado.",
+      "toast.copyFail": "Não consegui copiar.",
+      "confirm.new": "Limpar tudo e começar do zero?",
+      "confirm.delete": "Excluir “{name}”?",
+      "sum.title": "Precificação: {name}",
+      "sum.product": "Produto",
+      "sum.batch": "Lote: {n} unidade(s)",
+      "sum.cost": "Custo por unidade: {v}",
+      "sum.price": "Preço de venda sugerido: {v}",
+      "sum.profit": "Lucro por unidade: {v} (margem real {m})",
+      "sum.profitBatch": "Lucro no lote: {v}",
+      "sum.comp": "Composição do preço:",
+      units: { un: "un", dz: "dz" },
+      ex_bolo: ["Bolo de pote de morango", "Leite condensado", "Creme de leite", "Chocolate em pó", "Farinha de trigo", "Ovos", "Morangos", "Pote com tampa", "Gás e energia do forno"],
+      ex_camiseta: ["Camiseta estampada", "Camiseta lisa", "Vinil de estampa", "Linha e fita", "Embalagem e etiqueta"],
+      ex_site: ["Site institucional para cliente", "Hospedagem (meses cobertos)", "Domínio (meses cobertos)", "Licença de tema", "Reuniões e imprevistos"]
     },
-    "en-US": {
-      appTitle: "Pricer Tool", appDesc: "List your expenses, time spent, and desired profit. Get your selling price instantly.",
-      btnStart: "Start over", secProduct: "The Product", lblProdName: "Product Name",
-      lblUnits: "How many units per batch?", lblCurrency: "Currency", secMaterials: "Materials & Supplies",
-      btnAddMat: "+ Add material", secTime: "Your Time", lblHours: "Hours spent on batch",
-      lblRate: "Your hourly rate", secSales: "Sales & Profit", lblMargin: "Desired profit margin",
-      lblTax: "Taxes", lblFee: "Fees (card/platform)", resTitle: "Suggested selling price",
-      statCost: "Cost per unit", statMin: "Minimum price (breakeven)", statProfit: "Profit per unit",
-      matName: "Material", matPaid: "Price paid", matBought: "Qty bought", matUsed: "Qty used"
+
+    en: {
+      "meta.title": "Price Calculator — work out the selling price of any product or service",
+      "meta.desc": "Selling price calculator for anyone who makes something: food, clothing, accessories, services, software. Add materials, time and costs to find out what to charge.",
+      "lang.aria": "Language",
+      "h1": "Price Calculator",
+      "intro": "For anyone who makes anything: cakes, t-shirts, bracelets, websites or lessons. List what you spent, how long it took and what you want to earn. The selling price comes out ready.",
+      "ex.label": "Want to see it in action?",
+      "ex.choose": "Pick an example…",
+      "ex.bolo": "Dessert jar (food)",
+      "ex.camiseta": "Printed t-shirt (clothing)",
+      "ex.site": "Client website (programming)",
+      "btn.new": "Start from scratch",
+      "sec.product": "The product",
+      "sec.product.hint": "For a service or one-off project, leave it at 1 unit.",
+      "f.name": "Name",
+      "f.name.ph": "E.g.: Dessert jar, Logo, Beaded necklace",
+      "f.units": "How many units does this batch make?",
+      "f.currency": "Currency",
+      "sec.mat": "Materials and supplies",
+      "sec.mat.hint": "Enter what you paid and how much you bought. The app works out the cost of only what you used in this batch. Works for ingredients, fabric, parts, licenses, hosting, electricity…",
+      "mat.add": "+ Add material",
+      "sec.time": "Your time",
+      "sec.time.hint": "Your work is a cost too. If you don't know what your hour is worth, enter how much you want to earn per month and how many hours you work.",
+      "f.hours": "Hours spent on the batch",
+      "f.minutes": "Extra minutes",
+      "f.income": "Desired monthly income",
+      "f.hoursMonth": "Hours worked per month",
+      "f.rate": "Your hourly rate",
+      "btn.calcRate": "Calculate from income",
+      "sec.fixed": "Monthly fixed costs",
+      "sec.fixed.hint": "Rent, electricity, internet, tools, subscriptions, business fees… Added up, they are divided by your working hours and applied in proportion to the time of this batch.",
+      "f.fixed": "Total fixed costs per month",
+      "sec.extra": "Other costs",
+      "sec.extra.hint": "Packaging, shipping, labels, travel, ads. Choose whether the amount is per batch or per unit.",
+      "extra.add": "+ Add cost",
+      "sec.sell": "Sales and profit",
+      "sec.sell.hint": "Taxes and fees are percentages of the selling price. The margin is what's left for you after everything.",
+      "f.margin": "Desired profit margin",
+      "f.tax": "Taxes",
+      "f.fee": "Fees (card, platform, commission)",
+      "f.rounding": "Round price",
+      "round.none": "Don't round",
+      "round.90": "End in .90",
+      "round.int": "To a whole number",
+      "res.priceLabel": "Suggested selling price, per unit",
+      "res.forName": "for {name}",
+      "s.cost": "Cost per unit",
+      "s.min": "Minimum price (zero profit)",
+      "s.profit": "Profit per unit",
+      "s.profitBatch": "Profit for the whole batch",
+      "s.margin": "Actual margin",
+      "s.hour": "Earnings per hour (your time + profit)",
+      "s.revenue": "Batch revenue",
+      "perHour": "/h",
+      "res.where": "Where each dollar of the price goes",
+      "part.mat": "Materials",
+      "part.labor": "Your time",
+      "part.over": "Fixed costs",
+      "part.extra": "Other costs",
+      "part.tax": "Taxes",
+      "part.fee": "Fees",
+      "part.profit": "Profit",
+      "btn.save": "Save product",
+      "btn.copy": "Copy summary",
+      "btn.print": "Print",
+      "saved.h": "Saved products",
+      "saved.empty": "Nothing saved yet. Build a product and tap “Save product”.",
+      "saved.noPrice": "no price",
+      "saved.perUnit": "{price} per unit",
+      "saved.unnamed": "Untitled",
+      "saved.open": "Open",
+      "saved.delete": "Delete",
+      "saved.note": "Data is stored only in this browser. Export a backup from time to time.",
+      "btn.export": "Export backup (.json)",
+      "btn.import": "Import backup",
+      "footer": "Price Calculator · runs right in your browser, nothing to install.",
+      "bar.label": "Suggested price per unit",
+      "bar.details": "See details",
+      "row.mat.ph": "Material (e.g. flour, fabric, license)",
+      "row.mat.aria": "Material name",
+      "row.mat.remove": "Remove material",
+      "row.paid": "Price paid",
+      "row.bought": "Quantity bought",
+      "row.used": "Quantity used",
+      "row.boughtUnit": "Unit bought",
+      "row.usedUnit": "Unit used",
+      "row.cost": "Cost in batch",
+      "row.extra.ph": "Cost (e.g. packaging, shipping)",
+      "row.extra.aria": "Cost name",
+      "row.extra.remove": "Remove cost",
+      "row.value": "Amount",
+      "row.charged": "Charged",
+      "per.unit": "Per unit",
+      "per.batch": "Per batch",
+      "warn.units": "Enter how many units the batch makes (greater than zero).",
+      "warn.deduct": "Margin + taxes + fees add up to {pct}. It must stay below 100% for a price to exist.",
+      "warn.empty": "Fill in at least one material, your time or another cost to calculate.",
+      "warn.rate0": "Your time is valued at zero per hour. Set an hourly rate so you don't work for free.",
+      "toast.saved": "Product saved in this browser.",
+      "toast.example": "Example loaded. Replace it with your own values.",
+      "toast.rate": "Enter the desired income and the hours per month.",
+      "toast.noExport": "Save a product before exporting.",
+      "toast.imported": "{n} product(s) imported.",
+      "toast.invalid": "Invalid file. Use a backup exported from here.",
+      "toast.noSummary": "Fill in the data to generate the summary.",
+      "toast.copied": "Summary copied.",
+      "toast.copyFail": "Couldn't copy.",
+      "confirm.new": "Clear everything and start from scratch?",
+      "confirm.delete": "Delete “{name}”?",
+      "sum.title": "Pricing: {name}",
+      "sum.product": "Product",
+      "sum.batch": "Batch: {n} unit(s)",
+      "sum.cost": "Cost per unit: {v}",
+      "sum.price": "Suggested selling price: {v}",
+      "sum.profit": "Profit per unit: {v} (actual margin {m})",
+      "sum.profitBatch": "Batch profit: {v}",
+      "sum.comp": "Price breakdown:",
+      units: { un: "pc", dz: "doz" },
+      ex_bolo: ["Strawberry dessert jar", "Condensed milk", "Heavy cream", "Cocoa powder", "Wheat flour", "Eggs", "Strawberries", "Jar with lid", "Gas and oven electricity"],
+      ex_camiseta: ["Printed t-shirt", "Blank t-shirt", "Transfer vinyl", "Thread and ribbon", "Packaging and label"],
+      ex_site: ["Business website for a client", "Hosting (months covered)", "Domain (months covered)", "Theme license", "Meetings and surprises"]
     },
-    "es-ES": {
-      appTitle: "Fijador de Precios", appDesc: "Haz una lista de tus gastos, el tiempo que tardaste y cuánto quieres ganar. El precio sale listo.",
-      btnStart: "Empezar de cero", secProduct: "El Producto", lblProdName: "Nombre",
-      lblUnits: "¿Cuántas unidades rinde?", lblCurrency: "Moneda", secMaterials: "Materiales e Insumos",
-      btnAddMat: "+ Añadir material", secTime: "Tu tiempo", lblHours: "Horas invertidas",
-      lblRate: "Valor de tu hora", secSales: "Ventas y ganancia", lblMargin: "Margen de ganancia",
-      lblTax: "Impuestos", lblFee: "Comisiones (tarjeta)", resTitle: "Precio de venta sugerido",
-      statCost: "Costo por unidad", statMin: "Precio mínimo", statProfit: "Ganancia por unidad",
-      matName: "Material", matPaid: "Precio pagado", matBought: "Cant. comprada", matUsed: "Cant. usada"
+
+    es: {
+      "meta.title": "Calculadora de precios — calcula el precio de venta de cualquier producto o servicio",
+      "meta.desc": "Calculadora de precio de venta para quien produce algo: comida, ropa, accesorios, servicios, programas. Suma materiales, tiempo y costos y descubre cuánto cobrar.",
+      "lang.aria": "Idioma",
+      "h1": "Calculadora de precios",
+      "intro": "Para quien hace cualquier cosa: tortas, camisetas, pulseras, sitios web o clases. Anota lo que gastaste, el tiempo que te llevó y cuánto quieres ganar. El precio de venta sale listo.",
+      "ex.label": "¿Quieres verlo en acción?",
+      "ex.choose": "Elige un ejemplo…",
+      "ex.bolo": "Postre en vaso (comida)",
+      "ex.camiseta": "Camiseta estampada (ropa)",
+      "ex.site": "Sitio web para cliente (programación)",
+      "btn.new": "Empezar de cero",
+      "sec.product": "El producto",
+      "sec.product.hint": "Si es un servicio o un proyecto único, deja 1 unidad.",
+      "f.name": "Nombre",
+      "f.name.ph": "Ej.: Postre en vaso, Logo, Collar de cuentas",
+      "f.units": "¿Cuántas unidades rinde este lote?",
+      "f.currency": "Moneda",
+      "sec.mat": "Materiales e insumos",
+      "sec.mat.hint": "Indica cuánto pagaste y cuánto compraste. La app calcula el costo solo de lo que usaste en este lote. Sirve para ingredientes, tela, piezas, licencias, hosting, energía…",
+      "mat.add": "+ Agregar material",
+      "sec.time": "Tu tiempo",
+      "sec.time.hint": "Tu trabajo también es un costo. Si no sabes cuánto vale tu hora, indica cuánto quieres ganar al mes y cuántas horas trabajas.",
+      "f.hours": "Horas dedicadas al lote",
+      "f.minutes": "Minutos extra",
+      "f.income": "Cuánto quieres ganar al mes",
+      "f.hoursMonth": "Horas trabajadas al mes",
+      "f.rate": "Valor de tu hora",
+      "btn.calcRate": "Calcular según el ingreso",
+      "sec.fixed": "Costos fijos del mes",
+      "sec.fixed.hint": "Alquiler, luz, internet, herramientas, suscripciones, impuestos fijos… Sumados, se dividen entre las horas trabajadas y entran en proporción al tiempo de este lote.",
+      "f.fixed": "Total de costos fijos al mes",
+      "sec.extra": "Otros costos",
+      "sec.extra.hint": "Empaque, envío, etiquetas, traslados, publicidad. Marca si el valor es por lote o por unidad.",
+      "extra.add": "+ Agregar costo",
+      "sec.sell": "Venta y ganancia",
+      "sec.sell.hint": "Los impuestos y comisiones son porcentajes del precio de venta. El margen es lo que te queda después de todo.",
+      "f.margin": "Margen de ganancia deseado",
+      "f.tax": "Impuestos",
+      "f.fee": "Comisiones (tarjeta, plataforma)",
+      "f.rounding": "Redondear precio",
+      "round.none": "No redondear",
+      "round.90": "Terminar en ,90",
+      "round.int": "Al número entero",
+      "res.priceLabel": "Precio de venta sugerido, por unidad",
+      "res.forName": "para {name}",
+      "s.cost": "Costo por unidad",
+      "s.min": "Precio mínimo (ganancia cero)",
+      "s.profit": "Ganancia por unidad",
+      "s.profitBatch": "Ganancia del lote completo",
+      "s.margin": "Margen real",
+      "s.hour": "Ingreso por hora (tu tiempo + ganancia)",
+      "s.revenue": "Ingresos del lote",
+      "perHour": "/h",
+      "res.where": "A dónde va cada peso del precio",
+      "part.mat": "Materiales",
+      "part.labor": "Tu tiempo",
+      "part.over": "Costos fijos",
+      "part.extra": "Otros costos",
+      "part.tax": "Impuestos",
+      "part.fee": "Comisiones",
+      "part.profit": "Ganancia",
+      "btn.save": "Guardar producto",
+      "btn.copy": "Copiar resumen",
+      "btn.print": "Imprimir",
+      "saved.h": "Productos guardados",
+      "saved.empty": "Aún no hay nada guardado. Arma un producto y toca “Guardar producto”.",
+      "saved.noPrice": "sin precio",
+      "saved.perUnit": "{price} por unidad",
+      "saved.unnamed": "Sin nombre",
+      "saved.open": "Abrir",
+      "saved.delete": "Eliminar",
+      "saved.note": "Los datos se guardan solo en este navegador. Exporta una copia de seguridad de vez en cuando.",
+      "btn.export": "Exportar copia (.json)",
+      "btn.import": "Importar copia",
+      "footer": "Calculadora de precios · funciona directo en el navegador, sin instalar nada.",
+      "bar.label": "Precio sugerido por unidad",
+      "bar.details": "Ver detalles",
+      "row.mat.ph": "Material (ej.: harina, tela, licencia)",
+      "row.mat.aria": "Nombre del material",
+      "row.mat.remove": "Quitar material",
+      "row.paid": "Precio pagado",
+      "row.bought": "Cantidad comprada",
+      "row.used": "Cantidad usada",
+      "row.boughtUnit": "Unidad comprada",
+      "row.usedUnit": "Unidad usada",
+      "row.cost": "Costo en el lote",
+      "row.extra.ph": "Costo (ej.: empaque, envío)",
+      "row.extra.aria": "Nombre del costo",
+      "row.extra.remove": "Quitar costo",
+      "row.value": "Valor",
+      "row.charged": "Se cobra",
+      "per.unit": "Por unidad",
+      "per.batch": "Por lote",
+      "warn.units": "Indica cuántas unidades rinde el lote (mayor que cero).",
+      "warn.deduct": "Margen + impuestos + comisiones suman {pct}. Debe ser menor que 100% para que exista un precio.",
+      "warn.empty": "Completa al menos un material, tu tiempo u otro costo para calcular.",
+      "warn.rate0": "Tu tiempo vale cero por hora. Define el valor de tu hora para no trabajar gratis.",
+      "toast.saved": "Producto guardado en este navegador.",
+      "toast.example": "Ejemplo cargado. Cámbialo por tus valores.",
+      "toast.rate": "Indica el ingreso deseado y las horas al mes.",
+      "toast.noExport": "Guarda algún producto antes de exportar.",
+      "toast.imported": "{n} producto(s) importado(s).",
+      "toast.invalid": "Archivo inválido. Usa una copia exportada desde aquí.",
+      "toast.noSummary": "Completa los datos para generar el resumen.",
+      "toast.copied": "Resumen copiado.",
+      "toast.copyFail": "No pude copiar.",
+      "confirm.new": "¿Borrar todo y empezar de cero?",
+      "confirm.delete": "¿Eliminar “{name}”?",
+      "sum.title": "Precios: {name}",
+      "sum.product": "Producto",
+      "sum.batch": "Lote: {n} unidad(es)",
+      "sum.cost": "Costo por unidad: {v}",
+      "sum.price": "Precio de venta sugerido: {v}",
+      "sum.profit": "Ganancia por unidad: {v} (margen real {m})",
+      "sum.profitBatch": "Ganancia del lote: {v}",
+      "sum.comp": "Composición del precio:",
+      units: { un: "ud", dz: "doc" },
+      ex_bolo: ["Postre en vaso de fresa", "Leche condensada", "Crema de leche", "Cacao en polvo", "Harina de trigo", "Huevos", "Fresas", "Vaso con tapa", "Gas y electricidad del horno"],
+      ex_camiseta: ["Camiseta estampada", "Camiseta lisa", "Vinilo de estampado", "Hilo y cinta", "Empaque y etiqueta"],
+      ex_site: ["Sitio web para cliente", "Hosting (meses cubiertos)", "Dominio (meses cubiertos)", "Licencia de tema", "Reuniones e imprevistos"]
     }
   };
 
-  /* ---------- Estado e Config ---------- */
-  let currentLang = "pt-BR";
-  let currentCurrency = "BRL";
-  
-  const $ = (s, r = document) => r.querySelector(s);
-  const $$ = (s, r = document) => [...r.querySelectorAll(s)];      const num = v => parseFloat(String(v).replace(",", ".")) \vert{}\vert{} 0;      const fmt = n => new Intl.NumberFormat(currentLang, { style: "currency", currency: currentCurrency }).format(n);      const t = (key) => dict[currentLang][key] \vert{}\vert{} key;      const newMat = () => ({ id: Math.random().toString(36).slice(2), name: "", paid: "", bought: "", used: "" });      let state = { name: "", units: 1, currency: "BRL", materials: [newMat()], hours: "", rate: "", margin: 30, tax: 0, fee: 0 };    /* ---------- Engine de Tradução ---------- */   function updateLanguage() {     document.documentElement.lang = currentLang;     $$("[data-i18n]").forEach(el => { el.textContent = t(el.dataset.i18n); });
-    renderRows();
-    render();
-  }
+  /* ---------- Idioma ---------- */
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+  };
 
-  $("#langSelect").addEventListener("change", e => {
-    currentLang = e.target.value;
-    updateLanguage();
+  const detectLang = () => {
+    const saved = store.get("precificador:lang", null);
+    if (saved && I18N[saved]) return saved;
+    const nav = (navigator.language || "pt").slice(0, 2).toLowerCase();
+    return I18N[nav] ? nav : "pt";
+  };
+  let lang = detectLang();
+
+  const t = (k, vars) => {
+    let s = I18N[lang][k] ?? I18N.pt[k] ?? k;
+    if (vars) for (const v in vars) s = s.replaceAll("{" + v + "}", vars[v]);
+    return s;
+  };
+
+  /* ---------- Unidades ---------- */
+  const UNITS = {
+    un:{fam:"count",f:1}, dz:{fam:"count",f:12},
+    kg:{fam:"mass",f:1000}, g:{fam:"mass",f:1},
+    L:{fam:"vol",f:1000}, ml:{fam:"vol",f:1},
+    m:{fam:"len",f:100}, cm:{fam:"len",f:1}, mm:{fam:"len",f:.1},
+    "m²":{fam:"area",f:10000}, "cm²":{fam:"area",f:1},
+    h:{fam:"time",f:60}, min:{fam:"time",f:1}
+  };
+  const ALL_UNITS = Object.keys(UNITS);
+  const familyOf = u => UNITS[u].fam;
+  const unitsInFamily = u => ALL_UNITS.filter(k => UNITS[k].fam === familyOf(u));
+  const unitLabel = u => (I18N[lang].units && I18N[lang].units[u]) || u;
+
+  /* ---------- Utilitários ---------- */
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const uid = () => Math.random().toString(36).slice(2, 9);
+  const num = v => { const n = parseFloat(String(v).replace(",", ".")); return Number.isFinite(n) ? n : 0; };
+  const pct = n => n.toLocaleString(LOCALES[lang], { maximumFractionDigits: 1 }) + "%";
+  let currency = "BRL";
+  const money = (n, cur = currency) => new Intl.NumberFormat(LOCALES[lang], { style: "currency", currency: cur }).format(n);
+  const fmt = n => money(n);
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  /* ---------- Estado ---------- */
+  const newMat = (o = {}) => ({ id: uid(), name: "", paid: "", bought: "", boughtUnit: "un", used: "", usedUnit: "un", ...o });
+  const newExtra = (o = {}) => ({ id: uid(), name: "", value: "", per: "unidade", ...o });
+  const defaults = () => ({
+    name: "", units: 1, currency: EX_CURRENCY[lang] || "BRL",
+    materials: [newMat()], extras: [],
+    hours: "", minutes: "", income: "", hoursMonth: 160, rate: "",
+    fixedMonthly: "", margin: 30, tax: 0, fee: 0, rounding: "none"
   });
 
-  /* ---------- UI & Calculos ---------- */
+  let state = defaults();
+  let currentId = null;
+
+  const normalize = s => {
+    const d = defaults();
+    const out = { ...d, ...s };
+    out.materials = (Array.isArray(s.materials) ? s.materials : []).map(m => {
+      const r = newMat(m);
+      if (!UNITS[r.boughtUnit]) r.boughtUnit = "un";
+      if (!UNITS[r.usedUnit] || familyOf(r.usedUnit) !== familyOf(r.boughtUnit)) r.usedUnit = r.boughtUnit;
+      return r;
+    });
+    out.extras = (Array.isArray(s.extras) ? s.extras : []).map(e => newExtra(e));
+    if (!out.materials.length) out.materials = [newMat()];
+    return out;
+  };
+
+  /* ---------- Exemplos (textos vêm do idioma ativo) ---------- */
+  const EXAMPLES = {
+    bolo: () => { const x = I18N[lang].ex_bolo; return {
+      name: x[0], units: 20, currency: EX_CURRENCY[lang],
+      materials: [
+        newMat({ name: x[1], paid: 7.5, bought: 395, boughtUnit: "g", used: 790, usedUnit: "g" }),
+        newMat({ name: x[2], paid: 4.5, bought: 200, boughtUnit: "g", used: 400, usedUnit: "g" }),
+        newMat({ name: x[3], paid: 12, bought: 200, boughtUnit: "g", used: 100, usedUnit: "g" }),
+        newMat({ name: x[4], paid: 5.5, bought: 1, boughtUnit: "kg", used: 300, usedUnit: "g" }),
+        newMat({ name: x[5], paid: 18, bought: 30, boughtUnit: "un", used: 6, usedUnit: "un" }),
+        newMat({ name: x[6], paid: 12, bought: 500, boughtUnit: "g", used: 500, usedUnit: "g" })
+      ],
+      extras: [newExtra({ name: x[7], value: 1.2, per: "unidade" }), newExtra({ name: x[8], value: 6, per: "lote" })],
+      hours: 3, minutes: 0, income: 3200, hoursMonth: 160, rate: 20,
+      fixedMonthly: 600, margin: 35, tax: 4, fee: 3, rounding: "90"
+    }; },
+    camiseta: () => { const x = I18N[lang].ex_camiseta; return {
+      name: x[0], units: 10, currency: EX_CURRENCY[lang],
+      materials: [
+        newMat({ name: x[1], paid: 14, bought: 1, boughtUnit: "un", used: 10, usedUnit: "un" }),
+        newMat({ name: x[2], paid: 90, bought: 5, boughtUnit: "m", used: 1.5, usedUnit: "m" }),
+        newMat({ name: x[3], paid: 20, bought: 1, boughtUnit: "un", used: 0.2, usedUnit: "un" })
+      ],
+      extras: [newExtra({ name: x[4], value: 1.5, per: "unidade" })],
+      hours: 4, minutes: 30, income: 3500, hoursMonth: 140, rate: 25,
+      fixedMonthly: 400, margin: 40, tax: 6, fee: 5, rounding: "90"
+    }; },
+    site: () => { const x = I18N[lang].ex_site; return {
+      name: x[0], units: 1, currency: EX_CURRENCY[lang],
+      materials: [
+        newMat({ name: x[1], paid: 300, bought: 12, boughtUnit: "un", used: 3, usedUnit: "un" }),
+        newMat({ name: x[2], paid: 40, bought: 12, boughtUnit: "un", used: 3, usedUnit: "un" }),
+        newMat({ name: x[3], paid: 250, bought: 1, boughtUnit: "un", used: 1, usedUnit: "un" })
+      ],
+      extras: [newExtra({ name: x[4], value: 200, per: "lote" })],
+      hours: 40, minutes: 0, income: 9000, hoursMonth: 120, rate: 75,
+      fixedMonthly: 1500, margin: 25, tax: 6, fee: 0, rounding: "int"
+    }; }
+  };
+
+  /* ---------- Aplicar traduções à página ---------- */
+  function applyI18n() {
+    document.documentElement.lang = LOCALES[lang];
+    document.title = t("meta.title");
+    const md = $('meta[name="description"]'); if (md) md.setAttribute("content", t("meta.desc"));
+    $$("[data-i18n]").forEach(el => { el.textContent = t(el.dataset.i18n); });
+    $$("[data-i18n-ph]").forEach(el => { el.placeholder = t(el.dataset.i18nPh); });
+    $$("[data-i18n-aria]").forEach(el => { el.setAttribute("aria-label", t(el.dataset.i18nAria)); });
+    $("#lang").value = lang;
+  }
+
+  /* ---------- Render das linhas ---------- */
+  const unitOpts = (list, sel) => list.map(u => `<option value="${esc(u)}"${u === sel ? " selected" : ""}>${esc(unitLabel(u))}</option>`).join("");
+
   function matRow(m) {
-    const el = document.createElement("div"); el.className = "row"; el.dataset.id = m.id;
+    const el = document.createElement("div");
+    el.className = "row";
+    el.dataset.id = m.id;
+    el.dataset.kind = "mat";
     el.innerHTML = `
       <div class="row-head">
-        <input type="text" data-k="name" placeholder="${t('matName')}">
-        <button class="x" type="button" data-remove>×</button>
+        <input type="text" data-k="name" placeholder="${esc(t("row.mat.ph"))}" aria-label="${esc(t("row.mat.aria"))}" autocomplete="off">
+        <button class="x" type="button" data-remove aria-label="${esc(t("row.mat.remove"))}" title="${esc(t("row.mat.remove"))}">×</button>
       </div>
       <div class="fields">
-        <label class="f"><span>${t('matPaid')}</span><input type="number" data-k="paid"></label>
-        <label class="f"><span>${t('matBought')}</span><input type="number" data-k="bought"></label>
-        <label class="f"><span>${t('matUsed')}</span><input type="number" data-k="used"></label>
+        <label class="f"><span>${esc(t("row.paid"))}</span><input type="number" inputmode="decimal" min="0" step="any" data-k="paid" placeholder="0"></label>
+        <label class="f"><span>${esc(t("row.bought"))}</span>
+          <span class="join"><input type="number" inputmode="decimal" min="0" step="any" data-k="bought" placeholder="0">
+          <select data-k="boughtUnit" aria-label="${esc(t("row.boughtUnit"))}">${unitOpts(ALL_UNITS, m.boughtUnit)}</select></span></label>
+        <label class="f"><span>${esc(t("row.used"))}</span>
+          <span class="join"><input type="number" inputmode="decimal" min="0" step="any" data-k="used" placeholder="0">
+          <select data-k="usedUnit" aria-label="${esc(t("row.usedUnit"))}">${unitOpts(unitsInFamily(m.boughtUnit), m.usedUnit)}</select></span></label>
+        <div class="f cost"><span class="lbl">${esc(t("row.cost"))}</span><b>${fmt(0)}</b></div>
       </div>`;
-    $('[data-k="name"]', el).value = m.name; $('[data-k="paid"]', el).value = m.paid;
-    $('[data-k="bought"]', el).value = m.bought; $('[data-k="used"]', el).value = m.used;
+    $('[data-k="name"]', el).value = m.name;
+    $('[data-k="paid"]', el).value = m.paid;
+    $('[data-k="bought"]', el).value = m.bought;
+    $('[data-k="used"]', el).value = m.used;
+    return el;
+  }
+
+  function extraRow(e) {
+    const el = document.createElement("div");
+    el.className = "row";
+    el.dataset.id = e.id;
+    el.dataset.kind = "extra";
+    el.innerHTML = `
+      <div class="row-head">
+        <input type="text" data-k="name" placeholder="${esc(t("row.extra.ph"))}" aria-label="${esc(t("row.extra.aria"))}" autocomplete="off">
+        <button class="x" type="button" data-remove aria-label="${esc(t("row.extra.remove"))}" title="${esc(t("row.extra.remove"))}">×</button>
+      </div>
+      <div class="fields">
+        <label class="f"><span>${esc(t("row.value"))}</span><input type="number" inputmode="decimal" min="0" step="any" data-k="value" placeholder="0"></label>
+        <label class="f"><span>${esc(t("row.charged"))}</span>
+          <select data-k="per"><option value="unidade"${e.per === "unidade" ? " selected" : ""}>${esc(t("per.unit"))}</option><option value="lote"${e.per === "lote" ? " selected" : ""}>${esc(t("per.batch"))}</option></select></label>
+      </div>`;
+    $('[data-k="name"]', el).value = e.name;
+    $('[data-k="value"]', el).value = e.value;
     return el;
   }
 
   function renderRows() {
     $("#materials").replaceChildren(...state.materials.map(matRow));
+    $("#extras").replaceChildren(...state.extras.map(extraRow));
+  }
+
+  function renderStatic() {
+    $$("[data-f]").forEach(el => { el.value = state[el.dataset.f] ?? ""; });
+    currency = state.currency;
+  }
+
+  /* ---------- Cálculo ---------- */
+  let last = null;
+
+  function compute() {
+    const s = state;
+    const units = Math.max(num(s.units), 0);
+
+    let mats = 0;
+    const perRow = {};
+    s.materials.forEach(m => {
+      const bought = num(m.bought) * UNITS[m.boughtUnit].f;
+      const cost = bought > 0 ? num(m.paid) / bought * num(m.used) * UNITS[m.usedUnit].f : 0;
+      perRow[m.id] = cost;
+      mats += cost;
+    });
+
+    const timeH = num(s.hours) + num(s.minutes) / 60;
+    const labor = timeH * num(s.rate);
+    const hm = num(s.hoursMonth);
+    const overhead = hm > 0 ? timeH * num(s.fixedMonthly) / hm : 0;
+    let extras = 0;
+    s.extras.forEach(e => { extras += e.per === "unidade" ? num(e.value) * units : num(e.value); });
+
+    const total = mats + labor + overhead + extras;
+    const costU = units > 0 ? total / units : 0;
+    const tax = num(s.tax), fee = num(s.fee), margin = num(s.margin);
+    const deduct = tax + fee + margin;
+    const warnings = [];
+
+    let price = null;
+    if (units <= 0) warnings.push(t("warn.units"));
+    else if (deduct >= 100) warnings.push(t("warn.deduct", { pct: pct(deduct) }));
+    else if (total <= 0) warnings.push(t("warn.empty"));
+    else {
+      price = costU / (1 - deduct / 100);
+      if (s.rounding === "int") price = Math.ceil(price - 1e-9);
+      else if (s.rounding === "90") { const f = Math.floor(price); price = f + .9 >= price ? f + .9 : f + 1.9; }
+    }
+    if (timeH > 0 && num(s.rate) === 0) warnings.push(t("warn.rate0"));
+
+    let r = { units, total, costU, price, warnings, perRow, timeH, parts: null };
+    if (price !== null) {
+      const taxV = price * tax / 100, feeV = price * fee / 100;
+      const profit = price - costU - taxV - feeV;
+      const minPrice = costU / (1 - (tax + fee) / 100 || 1);
+      r = { ...r, taxV, feeV, profit, minPrice,
+        profitBatch: profit * units, revenue: price * units,
+        realMargin: price > 0 ? profit / price * 100 : 0,
+        perHour: timeH > 0 ? (labor + profit * units) / timeH : null,
+        parts: [
+          ["part.mat", mats / units, "--c-mat"],
+          ["part.labor", labor / units, "--c-labor"],
+          ["part.over", overhead / units, "--c-over"],
+          ["part.extra", extras / units, "--c-extra"],
+          ["part.tax", taxV, "--c-tax"],
+          ["part.fee", feeV, "--c-fee"],
+          ["part.profit", profit, "--c-profit"]
+        ] };
+    }
+    return r;
   }
 
   function render() {
-    currentCurrency = state.currency;
-    const units = Math.max(num(state.units), 0);
-    
-    let mats = 0;
-    state.materials.forEach(m => {
-      const b = num(m.bought);
-      if(b > 0) mats += (num(m.paid) / b) * num(m.used);
+    currency = state.currency;
+    const r = compute();
+    last = r;
+
+    $$("#materials .row").forEach(row => {
+      const b = $(".cost b", row);
+      if (b) b.textContent = fmt(r.perRow[row.dataset.id] || 0);
     });
 
-    const labor = num(state.hours) * num(state.rate);
-    const totalCost = mats + labor;
-    const costU = units > 0 ? totalCost / units : 0;
-    
-    const deduct = num(state.tax) + num(state.fee) + num(state.margin);
-    let price = null, minPrice = null, profit = null;
+    const dash = "—";
+    const name = state.name.trim();
+    $("#outPrice").textContent = r.price !== null ? fmt(r.price) : dash;
+    $("#barPrice").textContent = r.price !== null ? fmt(r.price) : dash;
+    $("#outFor").textContent = name ? t("res.forName", { name }) : "";
+    $("#sCost").textContent = r.units > 0 && r.total > 0 ? fmt(r.costU) : dash;
 
-    if (units > 0 && deduct < 100 && totalCost > 0) {
-      price = costU / (1 - deduct / 100);
-      minPrice = costU / (1 - (num(state.tax) + num(state.fee)) / 100);
-      profit = price - costU - (price * (num(state.tax) + num(state.fee)) / 100);
-    }
+    const has = r.price !== null;
+    $("#sMin").textContent = has ? fmt(r.minPrice) : dash;
+    $("#sProfit").textContent = has ? fmt(r.profit) : dash;
+    $("#sProfitBatch").textContent = has ? fmt(r.profitBatch) : dash;
+    $("#sMargin").textContent = has ? pct(r.realMargin) : dash;
+    $("#sHour").textContent = has && r.perHour !== null ? fmt(r.perHour) + t("perHour") : dash;
+    $("#sRevenue").textContent = has ? fmt(r.revenue) : dash;
 
-    $("#outPrice").textContent = price !== null ? fmt(price) : "—";
-    $("#sCost").textContent = costU > 0 ? fmt(costU) : "—";
-    $("#sMin").textContent = minPrice !== null ? fmt(minPrice) : "—";
-    $("#sProfit").textContent = profit !== null ? fmt(profit) : "—";
+    const stack = $("#stack"), legend = $("#legend");
+    if (has && r.price > 0) {
+      const parts = r.parts.filter(p => p[1] > 0.0001);
+      stack.innerHTML = parts.map(p => `<i style="width:${(p[1] / r.price * 100).toFixed(2)}%;background:var(${p[2]})"></i>`).join("");
+      legend.innerHTML = parts.map(p => `<li><span class="sw" style="background:var(${p[2]})"></span><span class="n">${esc(t(p[0]))}</span><span class="v">${fmt(p[1])}</span><span class="p">${pct(p[1] / r.price * 100)}</span></li>`).join("");
+    } else { stack.innerHTML = ""; legend.innerHTML = ""; }
+
+    const w = $("#warn");
+    if (r.warnings.length) { w.hidden = false; w.innerHTML = r.warnings.map(esc).join("<br>"); }
+    else w.hidden = true;
+
+    store.set("precificador:draft", state);
   }
 
+  /* ---------- Eventos do formulário ---------- */
   document.addEventListener("input", ev => {
-    const el = ev.target;
-    if (el.dataset.f) {
-      state[el.dataset.f] = el.value;
-      render(); return;
+    const t_ = ev.target;
+    if (t_.id === "lang" || t_.id === "exemplo") return;
+    if (t_.dataset.f) {
+      state[t_.dataset.f] = t_.value;
+      render();
+      return;
     }
-    const row = el.closest(".row");
-    if (row && el.dataset.k) {
-      const m = state.materials.find(i => i.id === row.dataset.id);
-      if (m) { m[el.dataset.k] = el.value; render(); }
+    const row = t_.closest(".row");
+    if (!row || !t_.dataset.k) return;
+    const list = row.dataset.kind === "mat" ? state.materials : state.extras;
+    const item = list.find(i => i.id === row.dataset.id);
+    if (!item) return;
+    item[t_.dataset.k] = t_.value;
+    if (t_.dataset.k === "boughtUnit") {
+      const sel = $('[data-k="usedUnit"]', row);
+      if (familyOf(item.usedUnit) !== familyOf(item.boughtUnit)) item.usedUnit = item.boughtUnit;
+      sel.innerHTML = unitOpts(unitsInFamily(item.boughtUnit), item.usedUnit);
     }
+    render();
   });
 
   document.addEventListener("click", ev => {
-    if (ev.target.matches("[data-remove]")) {
-      const id = ev.target.closest(".row").dataset.id;
-      state.materials = state.materials.filter(m => m.id !== id);
-      if (!state.materials.length) state.materials.push(newMat());
+    const rm = ev.target.closest("[data-remove]");
+    if (rm) {
+      const row = rm.closest(".row");
+      const isMat = row.dataset.kind === "mat";
+      const key = isMat ? "materials" : "extras";
+      state[key] = state[key].filter(i => i.id !== row.dataset.id);
+      if (isMat && !state.materials.length) state.materials.push(newMat());
       renderRows(); render();
     }
   });
 
+  $("#lang").addEventListener("change", ev => {
+    lang = ev.target.value;
+    store.set("precificador:lang", lang);
+    applyI18n(); renderRows(); render(); renderSaved();
+  });
+
   $("#addMat").addEventListener("click", () => {
-    const m = newMat();
-    state.materials.push(m);
-    const el = matRow(m);
-    $("#materials").appendChild(el);
-    $('[data-k="name"]', el).focus();
+    const m = newMat(); state.materials.push(m);
+    const el = matRow(m); $("#materials").appendChild(el);
+    $('[data-k="name"]', el).focus(); render();
+  });
+  $("#addExtra").addEventListener("click", () => {
+    const e = newExtra(); state.extras.push(e);
+    const el = extraRow(e); $("#extras").appendChild(el);
+    $('[data-k="name"]', el).focus(); render();
+  });
+
+  $("#calcRate").addEventListener("click", () => {
+    const inc = num(state.income), h = num(state.hoursMonth);
+    if (inc <= 0 || h <= 0) return toast(t("toast.rate"));
+    state.rate = Math.round(inc / h * 100) / 100;
+    $('[data-f="rate"]').value = state.rate;
     render();
   });
 
+  $("#exemplo").addEventListener("change", ev => {
+    const k = ev.target.value; if (!k) return;
+    state = normalize(EXAMPLES[k]()); currentId = null;
+    renderStatic(); renderRows(); render();
+    ev.target.value = "";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    toast(t("toast.example"));
+  });
+
   $("#btnNovo").addEventListener("click", () => {
-    state = { name: "", units: 1, currency: "BRL", materials: [newMat()], hours: "", rate: "", margin: 30, tax: 0, fee: 0 };
-    $$("[data-f]").forEach(el => el.value = state[el.dataset.f]);     renderRows();     render();   });    /* Iniciar */   $$
-("[data-f]").forEach(el => el.value = state[el.dataset.f]);
-  renderRows();
-  render();
+    if (!confirm(t("confirm.new"))) return;
+    state = defaults(); currentId = null;
+    renderStatic(); renderRows(); render();
+  });
+
+  $("#barBtn").addEventListener("click", () => $("#resultado").scrollIntoView({ behavior: "smooth" }));
+
+  /* ---------- Salvos ---------- */
+  const getItems = () => store.get("precificador:items", []);
+  const setItems = v => store.set("precificador:items", v);
+
+  function renderSaved() {
+    const items = getItems(), ul = $("#savedList");
+    if (!items.length) { ul.innerHTML = `<li class="empty" style="background:none;border-style:dashed">${esc(t("saved.empty"))}</li>`; return; }
+    ul.innerHTML = items.map(it => {
+      const p = it.price != null ? money(it.price, it.state.currency || "BRL") : t("saved.noPrice");
+      return `<li data-id="${esc(it.id)}"><div class="t"><b>${esc(it.state.name || t("saved.unnamed"))}</b><small>${esc(t("saved.perUnit", { price: p }))}</small></div>
+        <button class="btn small" data-open type="button">${esc(t("saved.open"))}</button>
+        <button class="x" data-del type="button" aria-label="${esc(t("saved.delete"))}" title="${esc(t("saved.delete"))}">×</button></li>`;
+    }).join("");
+  }
+
+  $("#btnSave").addEventListener("click", () => {
+    const items = getItems();
+    const snap = JSON.parse(JSON.stringify(state));
+    if (!snap.name.trim()) snap.name = t("saved.unnamed");
+    const entry = { id: currentId || uid(), state: snap, price: last && last.price, savedAt: Date.now() };
+    const i = items.findIndex(x => x.id === entry.id);
+    if (i >= 0) items[i] = entry; else items.unshift(entry);
+    currentId = entry.id;
+    setItems(items); renderSaved(); toast(t("toast.saved"));
+  });
+
+  $("#savedList").addEventListener("click", ev => {
+    const li = ev.target.closest("li[data-id]"); if (!li) return;
+    const items = getItems(), it = items.find(x => x.id === li.dataset.id); if (!it) return;
+    if (ev.target.closest("[data-open]")) {
+      state = normalize(it.state); currentId = it.id;
+      renderStatic(); renderRows(); render();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else if (ev.target.closest("[data-del]")) {
+      if (!confirm(t("confirm.delete", { name: it.state.name || t("saved.unnamed") }))) return;
+      setItems(items.filter(x => x.id !== it.id));
+      if (currentId === it.id) currentId = null;
+      renderSaved();
+    }
+  });
+
+  $("#btnExport").addEventListener("click", () => {
+    const items = getItems();
+    if (!items.length) return toast(t("toast.noExport"));
+    const blob = new Blob([JSON.stringify(items, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = "precificador-backup.json";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  });
+  $("#btnImport").addEventListener("click", () => $("#fileImport").click());
+  $("#fileImport").addEventListener("change", async ev => {
+    const f = ev.target.files[0]; if (!f) return;
+    try {
+      const data = JSON.parse(await f.text());
+      const list = (Array.isArray(data) ? data : [data]).filter(x => x && x.state);
+      if (!list.length) throw 0;
+      const items = getItems();
+      list.forEach(x => {
+        const e = { id: x.id || uid(), state: normalize(x.state), price: x.price ?? null, savedAt: x.savedAt || Date.now() };
+        const i = items.findIndex(y => y.id === e.id);
+        if (i >= 0) items[i] = e; else items.push(e);
+      });
+      setItems(items); renderSaved(); toast(t("toast.imported", { n: list.length }));
+    } catch { toast(t("toast.invalid")); }
+    ev.target.value = "";
+  });
+
+  /* ---------- Copiar / imprimir ---------- */
+  $("#btnCopy").addEventListener("click", async () => {
+    if (!last || last.price === null) return toast(t("toast.noSummary"));
+    const r = last;
+    const lines = [
+      t("sum.title", { name: state.name.trim() || t("sum.product") }),
+      t("sum.batch", { n: r.units }),
+      t("sum.cost", { v: fmt(r.costU) }),
+      t("sum.price", { v: fmt(r.price) }),
+      t("sum.profit", { v: fmt(r.profit), m: pct(r.realMargin) }),
+      t("sum.profitBatch", { v: fmt(r.profitBatch) }),
+      "",
+      t("sum.comp"),
+      ...r.parts.filter(p => p[1] > 0.0001).map(p => `- ${t(p[0])}: ${fmt(p[1])}`)
+    ].join("\n");
+    try { await navigator.clipboard.writeText(lines); toast(t("toast.copied")); }
+    catch {
+      const ta = document.createElement("textarea"); ta.value = lines; document.body.appendChild(ta);
+      ta.select(); try { document.execCommand("copy"); toast(t("toast.copied")); } catch { toast(t("toast.copyFail")); }
+      ta.remove();
+    }
+  });
+  $("#btnPrint").addEventListener("click", () => window.print());
+
+  /* ---------- Aviso rápido ---------- */
+  let tt;
+  function toast(msg) {
+    const el = $("#toast"); el.textContent = msg; el.classList.add("on");
+    clearTimeout(tt); tt = setTimeout(() => el.classList.remove("on"), 2600);
+  }
+
+  /* ---------- Início ---------- */
+  const draft = store.get("precificador:draft", null);
+  if (draft) state = normalize(draft);
+  applyI18n(); renderStatic(); renderRows(); render(); renderSaved();
 })();
 </script>
 </body>
